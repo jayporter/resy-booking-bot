@@ -19,3 +19,4 @@ object ReservationTimeType {
 }
 
 final case class SnipeTime(hours: Int, minutes: Int)
+final case class SnipeInterval(hours: Int, minutes: Int)

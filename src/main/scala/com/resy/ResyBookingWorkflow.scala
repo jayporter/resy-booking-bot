@@ -8,7 +8,19 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-class ResyBookingWorkflow(resyClient: ResyClient, resDetails: ReservationDetails) extends Logging {
+
+trait Debug { 
+      def debugVars():Any = {
+          val thisClassName = this.getClass.getName()
+          val vars = this.getClass.getDeclaredFields
+          for(v <- vars){
+          v.setAccessible(true)
+          println(thisClassName + " field: " + v.getName() + " => " + v.get(this))
+          }
+      }
+}
+
+class ResyBookingWorkflow(resyClient: ResyClient, resDetails: ReservationDetails) extends Logging with Debug {
 
   def run(millisToRetry: Long = (10 seconds).toMillis): Try[String] =
     runnable(millisToRetry, DateTime.now.getMillis)

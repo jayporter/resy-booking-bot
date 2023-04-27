@@ -10,6 +10,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
+
 object ResyBookingBot extends Logging {
 
   def main(args: Array[String]): Unit = {
@@ -19,6 +20,7 @@ object ResyBookingBot extends Logging {
     val resyKeys   = resyConfig.at("resyKeys").loadOrThrow[ResyKeys]
     val resDetails = resyConfig.at("resDetails").loadOrThrow[ReservationDetails]
     val snipeTime  = resyConfig.at("snipeTime").loadOrThrow[SnipeTime]
+    val snipeInterval = resyConfig.at("snipeInterval").loadOrThrow[SnipeInterval]
 
     val resyApi             = new ResyApi(resyKeys)
     val resyClient          = new ResyClient(resyApi)
@@ -41,17 +43,30 @@ object ResyBookingBot extends Logging {
     val minutesRemaining    = millisUntilTomorrow / 1000 / 60 - hoursRemaining * 60
     val secondsRemaining =
       millisUntilTomorrow / 1000 - hoursRemaining * 60 * 60 - minutesRemaining * 60
+  
+    val snipeIntervalDuration = snipeInterval.hours.hours + snipeInterval.minutes.minutes
 
     logger.info(s"Next snipe time: $nextSnipeTime")
+
+    logger.info(s"Millis Until Next Snipe: $millisUntilTomorrow")
     logger.info(
       s"Sleeping for $hoursRemaining hours, $minutesRemaining minutes, and $secondsRemaining seconds"
     )
 
-    system.scheduler.scheduleOnce(millisUntilTomorrow millis) {
-      resyBookingWorkflow.run()
+    lazy val schedulerInstance:akka.actor.Cancellable = system.scheduler.schedule(millisUntilTomorrow millis, snipeIntervalDuration) {
 
-      logger.info("Shutting down Resy Booking Bot")
-      System.exit(0)
-    }
+      resyBookingWorkflow.run()
+      resyBookingWorkflow.debugVars()
+      resyClient.debugVars()
+      if (resyClient.resyConfirmed == "No Booking Yet") {
+        logger.info(s"Sleeping for $snipeIntervalDuration")
+      }
+      else {
+        logger.info("Cancelling further attempts")
+        schedulerInstance.cancel()
+      } 
+    } 
+
+    logger.info(s"Scheduler instance $schedulerInstance")
   }
 }

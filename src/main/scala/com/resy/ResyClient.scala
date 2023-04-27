@@ -10,10 +10,12 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-class ResyClient(resyApi: ResyApi) extends Logging {
+class ResyClient(resyApi: ResyApi) extends Logging with Debug {
 
   private type ReservationMap = Map[String, TableTypeMap]
   private type TableTypeMap   = Map[String, String]
+
+  var resyConfirmed = "No Booking Yet"
 
   import ResyClientErrorMessages._
 
@@ -131,6 +133,7 @@ class ResyClient(resyApi: ResyApi) extends Logging {
         logger.info("(҂‾ ▵‾)︻デ═一 (× _ ×#")
         logger.info("Successfully sniped reservation")
         logger.info(s"Resy token is $resyToken")
+        resyConfirmed = resyToken
         Success(resyToken)
       case _ =>
         logger.info("Missed the shot!")
